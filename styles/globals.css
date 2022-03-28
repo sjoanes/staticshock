@@ -109,7 +109,7 @@ body {
   width: 320px;
   box-shadow: 0 2px 10px 0 #454ad8;
   border-radius: 5px;
-  background: linear-gradient(#2126bd, #454ad8);
+  background: linear-gradient(#2126bd, #5056ff);
   display: flex;
     flex-direction: column;
 }
@@ -179,7 +179,8 @@ input, button {
 }
 
 button {
-  background: linear-gradient(rgb(255 0 0), rgb(214 7 239));	
+  background: transparent;	
+  border: none;
 }
 
 #error {
