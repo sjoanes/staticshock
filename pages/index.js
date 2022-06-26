@@ -12,7 +12,6 @@ export default function Home() {
 
     const hand = new Hand();
     const leaves = Array.from(Array(50).keys()).map(() => new Leaf(hand));
-    const sun = new Sun();
 
     canvas.addEventListener('mousemove', function(e) {
       hand.x = e.pageX;
@@ -35,7 +34,7 @@ export default function Home() {
       canvas.height = window.innerHeight;
     });
 
-    animator(leaves, sun)();
+    animator(leaves, new Sun(), new Sky())();
   }, []);
   return <canvas id="canvas1" />
 }
@@ -104,17 +103,22 @@ class Hand {
   draw() {}
 }
 
+const DAY_DURATION = 15000;
+
 class Sun {
   constructor() {
     this.x = 0;
     this.y = canvas.height / 2;
     this.size = 100;
+    this.previousRotation = 0;
   }
 
-  update () {
+  update (elapsed) {
     const origin_x = 0;
     const origin_y = canvas.height;
-    const ROTATE = Math.PI/400;
+    const delta = (elapsed % DAY_DURATION)/DAY_DURATION - this.previousRotation
+    this.previousRotation = (elapsed % DAY_DURATION)/DAY_DURATION;
+    const ROTATE = (2*Math.PI)*delta;
 
     this.x = Math.cos(ROTATE) * (this.x - origin_x) - Math.sin(ROTATE) * (this.y - origin_y) + origin_x;
     this.y = Math.sin(ROTATE) * (this.x - origin_x) + Math.cos(ROTATE) * (this.y - origin_y) + origin_y;
@@ -132,34 +136,75 @@ class Sun {
     const origin_y = canvas.height;
     const moon_x = Math.cos(Math.PI) * (this.x - origin_x) - Math.sin(Math.PI) * (this.y - origin_y) + origin_x;
     const moon_y = Math.sin(Math.PI) * (this.x - origin_x) + Math.cos(Math.PI) * (this.y - origin_y) + origin_y;
-    const CRESCENT_OPENING = Math.PI/2;
 
     ctx.fillStyle = 'white';
     ctx.beginPath();
     ctx.arc(moon_x, moon_y, this.size, Math.PI*0.3, Math.PI * 1.56);
     ctx.arc(moon_x + 40, moon_y - 10, this.size-10, Math.PI*1.42, Math.PI*0.42, true);
     ctx.fill();
-    
   }
 }
 
+const noon1 = [143, 209, 238];
+const noon2 = [29, 151, 216];
+class Sky {
+  constructor() {
+    this.color1 = [...noon1];
+    this.color2 = [...noon2];
+    this.previousFrame;
+    this.cycle = [
+      [noon1, noon2],
+      [[249, 60, 41], [255, 150, 70]],
+      [[0, 72, 129], [0, 0, 0]],
+      [[0, 72, 129], [0, 0, 0]],
+    ];
+  }
 
-function animator(leaves, sun) {
-  return function animate() {
-    // sky
+  update(elapsed) {
+    const CYCLE_DURATION = DAY_DURATION/this.cycle.length;
+    const frame = (elapsed % CYCLE_DURATION)/CYCLE_DURATION;
+    if (this.previousFrame > frame) {
+      const head = this.cycle.shift();
+      this.cycle.push(head);
+    }
+    this.previousFrame = frame;
+    const currentColor = this.cycle[0];
+    const targetColor = this.cycle[1];
+    this.color1[0] = currentColor[0][0] + (targetColor[0][0] - currentColor[0][0])*frame;
+    this.color1[1] = currentColor[0][1] + (targetColor[0][1] - currentColor[0][1])*frame;
+    this.color1[2] = currentColor[0][2] + (targetColor[0][2] - currentColor[0][2])*frame;
+
+    this.color2[0] = currentColor[1][0] + (targetColor[1][0] - currentColor[1][0])*frame;
+    this.color2[1] = currentColor[1][1] + (targetColor[1][1] - currentColor[1][1])*frame;
+    this.color2[2] = currentColor[1][2] + (targetColor[1][2] - currentColor[1][2])*frame;
+  }
+
+  draw() {
     var sky = ctx.createLinearGradient(0, canvas.height - 250, 0, 0);
-    sky.addColorStop(0, "#8fd1ee");
-    sky.addColorStop(1, "#1d97d8");
+    sky.addColorStop(0, `rgb(${this.color1[0]}, ${this.color1[1]}, ${this.color1[2]})`);
+    sky.addColorStop(1, `rgb(${this.color2[0]}, ${this.color2[1]}, ${this.color2[2]})`);
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+}
 
+let start;
+function animator(leaves, sun, sky) {
+  return function animate(timestamp) {
+    if (start === undefined) {
+      start = timestamp;
+    }
+    const elapsed = timestamp - start || 0;
+    // sky
+    sky.draw();
+    sky.update(elapsed);
     // name
     ctx.font = `80px Tahoma `;
     ctx.fillStyle = 'white';
     ctx.fillText("SAVIO", 10, 80);
 
     sun.draw();
-    sun.update();
+    sun.update(elapsed, timestamp);
 
     // beach
     ctx.fillStyle = '#f5f0d8';
@@ -174,8 +219,8 @@ function animator(leaves, sun) {
     ctx.fillRect(0, canvas.height-50, canvas.width, 50);
 
     for (const leaf of leaves) {
-      leaf.update();
       leaf.draw();
+      leaf.update(elapsed);
     }
     requestAnimationFrame(animate);
   }
