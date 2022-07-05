@@ -1,7 +1,8 @@
 import React from 'react'
 
-let ctx
-let canvas
+let ctx;
+let canvas;
+let DAY_DURATION = 15000;
 
 export default function Home() {
   React.useEffect(() => {
@@ -11,7 +12,7 @@ export default function Home() {
     canvas.height = window.innerHeight;
 
     const hand = new Hand();
-    const leaves = Array.from(Array(50).keys()).map(() => new Leaf(hand));
+    const leaves = Array.from(Array(25).keys()).map(() => new Leaf(hand));
 
     canvas.addEventListener('mousemove', function(e) {
       hand.x = e.pageX;
@@ -34,16 +35,23 @@ export default function Home() {
       canvas.height = window.innerHeight;
     });
 
-    animator(leaves, new Sun(), new Sky())();
+    animator(leaves, new AstralEntites(hand), new Sky())();
   }, []);
   return <canvas id="canvas1" />
+}
+
+function rotate(x, y, origin_x, origin_y, angle) {
+  return {
+    x: Math.cos(angle) * (x - origin_x) - Math.sin(angle) * (y - origin_y) + origin_x,
+    y: Math.sin(angle) * (x - origin_x) + Math.cos(angle) * (y - origin_y) + origin_y,
+  };
 }
 
 class Leaf {
   constructor(hand) {
     this.x = Math.random() * canvas.width;
     this.y = Math.random() * canvas.height;
-    this.size = 10;
+    this.size = 3;
     this.velocityY = 2;
     this.velocityX = 0;
     this.hand = hand;
@@ -103,14 +111,21 @@ class Hand {
   draw() {}
 }
 
-const DAY_DURATION = 15000;
+class AstralEntites {
+  constructor(hand) {
+    const origin_x = 0;
+    const origin_y = canvas.height;
 
-class Sun {
-  constructor() {
     this.x = 0;
     this.y = canvas.height / 2;
     this.size = 100;
     this.previousRotation = 0;
+    this.hand = hand;
+
+    this.stars = Array.from(Array(200).keys()).map(() => ({
+      x: canvas.width*2 * Math.random(),
+      y: canvas.height*2 * Math.random(),
+    })).map(star => rotate(star.x, star.y, origin_x, origin_y, Math.PI*0.5));;
   }
 
   update (elapsed) {
@@ -120,11 +135,16 @@ class Sun {
     this.previousRotation = (elapsed % DAY_DURATION)/DAY_DURATION;
     const ROTATE = (2*Math.PI)*delta;
 
-    this.x = Math.cos(ROTATE) * (this.x - origin_x) - Math.sin(ROTATE) * (this.y - origin_y) + origin_x;
-    this.y = Math.sin(ROTATE) * (this.x - origin_x) + Math.cos(ROTATE) * (this.y - origin_y) + origin_y;
+    const new_pos = rotate(this.x, this.y, origin_x, origin_y, ROTATE);
+    this.x = new_pos.x;
+    this.y = new_pos.y;
+    this.stars = this.stars.map(star => rotate(star.x, star.y, origin_x, origin_y, ROTATE));
   }
 
   draw() {
+    const origin_x = 0;
+    const origin_y = canvas.height;
+
     // sun
     ctx.fillStyle = 'white';
     ctx.beginPath();
@@ -132,8 +152,6 @@ class Sun {
     ctx.fill();
 
     // moon
-    const origin_x = 0;
-    const origin_y = canvas.height;
     const moon_x = Math.cos(Math.PI) * (this.x - origin_x) - Math.sin(Math.PI) * (this.y - origin_y) + origin_x;
     const moon_y = Math.sin(Math.PI) * (this.x - origin_x) + Math.cos(Math.PI) * (this.y - origin_y) + origin_y;
 
@@ -142,6 +160,13 @@ class Sun {
     ctx.arc(moon_x, moon_y, this.size, Math.PI*0.3, Math.PI * 1.56);
     ctx.arc(moon_x + 40, moon_y - 10, this.size-10, Math.PI*1.42, Math.PI*0.42, true);
     ctx.fill();
+
+    // stars
+    for (const star of this.stars) {
+      ctx.beginPath();
+      ctx.arc(star.x, star.y, 1, Math.PI*0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 }
 
