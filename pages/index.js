@@ -119,7 +119,7 @@ class AstralEntites {
     this.x = 0;
     this.y = canvas.height / 2;
     this.size = 100;
-    this.previousRotation = 0;
+    this.previousElapsed = 0;
     this.hand = hand;
 
     this.stars = Array.from(Array(200).keys()).map(() => ({
@@ -129,10 +129,15 @@ class AstralEntites {
   }
 
   update (elapsed) {
+    if (this.hand.close) {
+      DAY_DURATION = Math.max(DAY_DURATION - 100, 5000);
+    } else {
+      DAY_DURATION = Math.min(DAY_DURATION + 50, 10000);
+    }
     const origin_x = 0;
     const origin_y = canvas.height;
-    const delta = (elapsed % DAY_DURATION)/DAY_DURATION - this.previousRotation
-    this.previousRotation = (elapsed % DAY_DURATION)/DAY_DURATION;
+    const delta = (elapsed - this.previousElapsed)/DAY_DURATION;
+    this.previousElapsed = elapsed;
     const ROTATE = (2*Math.PI)*delta;
 
     const new_pos = rotate(this.x, this.y, origin_x, origin_y, ROTATE);
@@ -170,38 +175,39 @@ class AstralEntites {
   }
 }
 
-const noon1 = [143, 209, 238];
-const noon2 = [29, 151, 216];
 class Sky {
   constructor() {
-    this.color1 = [...noon1];
-    this.color2 = [...noon2];
-    this.previousFrame;
+    this.color1 = [143, 209, 238];
+    this.color2 = [29, 151, 216];
+    this.previousElapsed = 0;
     this.cycle = [
-      [noon1, noon2],
+      [[143, 209, 238], [29, 151, 216]],
       [[249, 60, 41], [255, 150, 70]],
-      [[0, 72, 129], [0, 0, 0]],
+      [[0, 0, 0], [0, 0, 0]],
       [[0, 72, 129], [0, 0, 0]],
     ];
+    this.change = 0;
   }
 
   update(elapsed) {
-    const CYCLE_DURATION = DAY_DURATION/this.cycle.length;
-    const frame = (elapsed % CYCLE_DURATION)/CYCLE_DURATION;
-    if (this.previousFrame > frame) {
+    const delta = (elapsed - this.previousElapsed)/(DAY_DURATION/this.cycle.length);
+    this.previousElapsed = elapsed;
+    const currentColor = this.cycle[0];
+    const targetColor = this.cycle[1];
+    this.color1[0] += (targetColor[0][0] - currentColor[0][0])*delta;
+    this.color1[1] += (targetColor[0][1] - currentColor[0][1])*delta;
+    this.color1[2] += (targetColor[0][2] - currentColor[0][2])*delta;
+
+    this.color2[0] += (targetColor[1][0] - currentColor[1][0])*delta;
+    this.color2[1] += (targetColor[1][1] - currentColor[1][1])*delta;
+    this.color2[2] += (targetColor[1][2] - currentColor[1][2])*delta;
+
+    this.change += delta;
+    if (this.change > 1) {
+      this.change = 0;
       const head = this.cycle.shift();
       this.cycle.push(head);
     }
-    this.previousFrame = frame;
-    const currentColor = this.cycle[0];
-    const targetColor = this.cycle[1];
-    this.color1[0] = currentColor[0][0] + (targetColor[0][0] - currentColor[0][0])*frame;
-    this.color1[1] = currentColor[0][1] + (targetColor[0][1] - currentColor[0][1])*frame;
-    this.color1[2] = currentColor[0][2] + (targetColor[0][2] - currentColor[0][2])*frame;
-
-    this.color2[0] = currentColor[1][0] + (targetColor[1][0] - currentColor[1][0])*frame;
-    this.color2[1] = currentColor[1][1] + (targetColor[1][1] - currentColor[1][1])*frame;
-    this.color2[2] = currentColor[1][2] + (targetColor[1][2] - currentColor[1][2])*frame;
   }
 
   draw() {
