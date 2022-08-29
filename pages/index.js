@@ -11,8 +11,9 @@ export default function Home() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
+    const beach = new Beach();
     const hand = new Hand();
-    const leaves = Array.from(Array(25).keys()).map(() => new Leaf(hand));
+    const leaves = Array.from(Array(25).keys()).map(() => new Leaf(hand, beach));
 
     canvas.addEventListener('mousemove', function(e) {
       hand.x = e.pageX;
@@ -35,7 +36,7 @@ export default function Home() {
       canvas.height = window.innerHeight;
     });
 
-    animator(leaves, new AstralEntites(hand), new Sky())();
+    animator(leaves, new AstralEntites(hand), new Sky(), beach)();
   }, []);
   return <canvas id="canvas1" />
 }
@@ -48,13 +49,14 @@ function rotate(x, y, origin_x, origin_y, angle) {
 }
 
 class Leaf {
-  constructor(hand) {
+  constructor(hand, beach) {
     this.x = Math.random() * canvas.width;
     this.y = Math.random() * canvas.height;
     this.size = 3;
     this.velocityY = 2;
     this.velocityX = 0;
     this.hand = hand;
+    this.beach = beach;
   }
 
   update() {
@@ -73,8 +75,9 @@ class Leaf {
       }
     } else {
       this.velocityY -= -0.05;
-      if (this.y > canvas.height-50) {
+      if (this.y > this.beach.waterHeight) {
         this.velocityY = 0;
+        this.y = this.beach.waterHeight;
       }
     }
     this.y += this.velocityY;
@@ -86,7 +89,7 @@ class Leaf {
   }
 
   draw() {
-    ctx.fillStyle = '#48c73f';
+    ctx.fillStyle = 'red';
     ctx.beginPath();
     const angle = this.velocityX + this.velocityY * Math.PI;
     ctx.arc(this.x, this.y, this.size, angle, angle + Math.PI);
@@ -219,8 +222,55 @@ class Sky {
   }
 }
 
+class Beach {
+  constructor() {
+    this.tide = 0;
+    this.direction = 1;
+    this.previousElapsed = 0;
+    this.waterHeight = canvas.height - 50 - this.tide;
+  }
+
+  update(elapsed) {
+    const tideHeight = 40;
+    if (!this.previousElapsed) {
+      this.previousElapsed = elapsed;
+    }
+    const percentOfDayElapsed = (elapsed - this.previousElapsed)/DAY_DURATION;
+    console.log(percentOfDayElapsed*100)
+    this.previousElapsed = elapsed;
+    if (this.tide >= tideHeight) {
+      this.direction = -1 * tideHeight*percentOfDayElapsed;
+    } else if (this.tide <= 0) {
+      this.direction = tideHeight*percentOfDayElapsed;
+    }
+    this.tide += this.direction;
+    this.waterHeight = canvas.height - 50 - this.tide;
+  }
+
+  draw() {
+    // water
+    ctx.fillStyle = '#49bcb9';
+    ctx.beginPath();
+    ctx.moveTo(0, this.waterHeight);
+    ctx.lineTo(0, canvas.height);
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.lineTo(canvas.width, this.waterHeight);
+    ctx.fill();
+
+    // sand
+    ctx.fillStyle = '#f5f0d8';
+    ctx.beginPath();
+    ctx.moveTo(canvas.width/2, canvas.height);
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.lineTo(canvas.width, canvas.height-60);
+    ctx.fill();
+
+    // tree
+  }
+}
+
 let start;
-function animator(leaves, sun, sky) {
+function animator(leaves, sun, sky, beach) {
   return function animate(timestamp) {
     if (start === undefined) {
       start = timestamp;
@@ -237,17 +287,8 @@ function animator(leaves, sun, sky) {
     sun.draw();
     sun.update(elapsed, timestamp);
 
-    // beach
-    ctx.fillStyle = '#f5f0d8';
-    ctx.beginPath();
-    ctx.moveTo(canvas.width/2, canvas.height);
-    ctx.lineTo(canvas.width, canvas.height);
-    ctx.lineTo(canvas.width, canvas.height-100);
-    ctx.fill();
-    ctx.fillStyle = '#49bcb9cc';
-
-    // ocean
-    ctx.fillRect(0, canvas.height-50, canvas.width, 50);
+    beach.draw();
+    beach.update(elapsed)
 
     for (const leaf of leaves) {
       leaf.draw();
