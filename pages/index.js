@@ -141,7 +141,7 @@ class AstralEntites {
     const origin_y = canvas.height;
     const delta = (elapsed - this.previousElapsed)/DAY_DURATION;
     this.previousElapsed = elapsed;
-    const ROTATE = (2*Math.PI)*delta;
+    const ROTATE = (Math.PI)*delta;
 
     const new_pos = rotate(this.x, this.y, origin_x, origin_y, ROTATE);
     this.x = new_pos.x;
@@ -227,45 +227,41 @@ class Beach {
     this.tide = 0;
     this.direction = 1;
     this.previousElapsed = 0;
-    this.waterHeight = canvas.height - 50 - this.tide;
+    this.waterHeight = canvas.height - 50;
+    this.wave = 0;
   }
 
   update(elapsed) {
-    const tideHeight = 40;
-    if (!this.previousElapsed) {
-      this.previousElapsed = elapsed;
-    }
-    const percentOfDayElapsed = (elapsed - this.previousElapsed)/DAY_DURATION;
-    console.log(percentOfDayElapsed*100)
-    this.previousElapsed = elapsed;
-    if (this.tide >= tideHeight) {
-      this.direction = -1 * tideHeight*percentOfDayElapsed;
-    } else if (this.tide <= 0) {
-      this.direction = tideHeight*percentOfDayElapsed;
-    }
-    this.tide += this.direction;
-    this.waterHeight = canvas.height - 50 - this.tide;
+    this.wave = (Math.sin(elapsed/2000) + 1) * 200;
   }
 
   draw() {
+    const COASTLINE = 5;
     // water
     ctx.fillStyle = '#49bcb9';
     ctx.beginPath();
     ctx.moveTo(0, this.waterHeight);
     ctx.lineTo(0, canvas.height);
-    ctx.lineTo(canvas.width, canvas.height);
+    ctx.lineTo(canvas.width / COASTLINE, canvas.height);
     ctx.lineTo(canvas.width, this.waterHeight);
     ctx.fill();
 
     // sand
     ctx.fillStyle = '#f5f0d8';
     ctx.beginPath();
-    ctx.moveTo(canvas.width/2, canvas.height);
+    ctx.moveTo(canvas.width / COASTLINE, canvas.height);
     ctx.lineTo(canvas.width, canvas.height);
-    ctx.lineTo(canvas.width, canvas.height-60);
+    ctx.lineTo(canvas.width, this.waterHeight);
     ctx.fill();
 
-    // tree
+    // wave
+    ctx.fillStyle = '#49bcb9';
+    ctx.beginPath();
+    ctx.moveTo(0, this.waterHeight);
+    ctx.lineTo(0, canvas.height);
+    ctx.lineTo(canvas.width / COASTLINE + this.wave, canvas.height);
+    ctx.lineTo(canvas.width + this.wave, this.waterHeight);
+    ctx.fill();
   }
 }
 
