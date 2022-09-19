@@ -3,6 +3,7 @@ import React from 'react'
 let ctx;
 let canvas;
 let DAY_DURATION = 15000;
+const COASTLINE = 2;
 
 export default function Home() {
   React.useEffect(() => {
@@ -56,7 +57,9 @@ class Leaf {
     this.velocityY = 2;
     this.velocityX = 0;
     this.hand = hand;
+    this.jitter = Math.random() * (canvas.height - 10 - beach.waterHeight);
     this.beach = beach;
+    this.isometricY = beach.waterHeight + this.jitter;
   }
 
   update() {
@@ -75,17 +78,30 @@ class Leaf {
       }
     } else {
       this.velocityY -= -0.05;
-      if (this.y > this.beach.waterHeight) {
+      if (this.y >= this.isometricY) {
         this.velocityY = 0;
-        this.y = this.beach.waterHeight;
+        this.y = this.isometricY;
+        this.velocityX = this.beach.waveAccel;
+      }
+      if (this.y > this.beach.waterHeight) {
+        const beachHeight = canvas.height - this.beach.waterHeight
+        const slope = beachHeight/(canvas.width/COASTLINE);
+        const coastX = (beachHeight - this.jitter)/slope;
+        if (this.x > (canvas.width/COASTLINE) + coastX + this.beach.wave) {
+          this.velocityX = 0;
+        }
       }
     }
+
     this.y += this.velocityY;
     this.y = Math.min(canvas.height - this.size, this.y);
 
     this.x += this.velocityX;
-    this.x = Math.max(0, this.x);
-    this.x = Math.min(canvas.width, this.x);
+    if (this.x < 0) {
+      this.x = canvas.width;
+    } else if (this.x > canvas.width) {
+      this.x = 0;
+    }
   }
 
   draw() {
@@ -232,13 +248,15 @@ class Beach {
   }
 
   update(elapsed) {
-    this.wave = (Math.sin(elapsed/2000) + 1) * 200;
+    const timeScale = 1000;
+    this.waveAccel = -1 * (Math.sin(elapsed/timeScale) + 0.1);
+    this.wave = (Math.cos(elapsed/timeScale) + 1)/2 * 200;
+    this.transparency = (1 - (Math.cos(elapsed/timeScale) + 1)/2);
   }
 
   draw() {
-    const COASTLINE = 5;
     // water
-    ctx.fillStyle = '#49bcb9';
+    ctx.fillStyle = `rgb(73, 188, 185, 0.999)`;
     ctx.beginPath();
     ctx.moveTo(0, this.waterHeight);
     ctx.lineTo(0, canvas.height);
@@ -255,10 +273,11 @@ class Beach {
     ctx.fill();
 
     // wave
-    ctx.fillStyle = '#49bcb9';
+    ctx.fillStyle = `rgb(235, 227, 187, ${1 - this.transparency})`;
+    ctx.fillStyle = `rgb(73, 188, 185, ${this.transparency})`;
     ctx.beginPath();
-    ctx.moveTo(0, this.waterHeight);
-    ctx.lineTo(0, canvas.height);
+    ctx.moveTo(canvas.width - 2, this.waterHeight);
+    ctx.lineTo(canvas.width / COASTLINE - 2, canvas.height);
     ctx.lineTo(canvas.width / COASTLINE + this.wave, canvas.height);
     ctx.lineTo(canvas.width + this.wave, this.waterHeight);
     ctx.fill();
