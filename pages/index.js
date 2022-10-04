@@ -37,7 +37,7 @@ export default function Home() {
       canvas.height = window.innerHeight;
     });
 
-    animator(leaves, new AstralEntites(hand), new Sky(), beach)();
+    animator(leaves, new AstralEntites(hand, leaves), new Sky(), beach)();
   }, []);
   return <canvas id="canvas1" />
 }
@@ -76,6 +76,10 @@ class Leaf {
       } else {
         this.velocityY += directionY * (0.1 * Math.random());
       }
+      this.velocityX = Math.min(3, this.velocityX)
+      this.velocityX = Math.max(-3, this.velocityX)
+      this.velocityY = Math.max(-3, this.velocityY)
+      this.velocityY = Math.max(-3, this.velocityY)
     } else {
       this.velocityY -= -0.05;
       if (this.y >= this.isometricY) {
@@ -131,7 +135,7 @@ class Hand {
 }
 
 class AstralEntites {
-  constructor(hand) {
+  constructor(hand, leaves) {
     const origin_x = 0;
     const origin_y = canvas.height;
 
@@ -140,6 +144,7 @@ class AstralEntites {
     this.size = 100;
     this.previousElapsed = 0;
     this.hand = hand;
+    this.leaves = leaves;
 
     this.stars = Array.from(Array(200).keys()).map(() => ({
       x: canvas.width*2 * Math.random(),
@@ -157,6 +162,20 @@ class AstralEntites {
     const origin_y = canvas.height;
     const delta = (elapsed - this.previousElapsed)/DAY_DURATION;
     this.previousElapsed = elapsed;
+
+    if (this.hand.close) {
+      let hitCount = 0;
+      for (let leaf of this.leaves) {
+        const distance = Math.sqrt(Math.pow(this.x - leaf.x, 2) + Math.pow(this.y - leaf.y, 2));
+        hitCount += distance <= this.size ? 1 : 0;
+      }
+      if (hitCount >= this.leaves.length - 10) {
+        this.x = this.hand.x;
+        this.y = this.hand.y;
+        return;
+      }
+    }
+
     const ROTATE = (Math.PI)*delta;
 
     const new_pos = rotate(this.x, this.y, origin_x, origin_y, ROTATE);
