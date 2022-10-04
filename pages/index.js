@@ -20,6 +20,10 @@ export default function Home() {
       hand.x = e.pageX;
       hand.y = e.pageY;
     });
+    canvas.addEventListener('touchmove', function(e) {
+      hand.x = e.pageX;
+      hand.y = e.pageY;
+    });
     canvas.addEventListener('mousedown', function(e) {
       hand.close = true;
     });
