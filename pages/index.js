@@ -222,9 +222,17 @@ class Sky {
     this.color2[2] += (targetColor[1][2] - currentColor[1][2])*delta;
 
     this.change += delta;
-    if (this.change > 1) {
-      this.change = 0;
+    while (this.change > 1) {
+      this.change -= 1;
       const head = this.cycle.shift();
+      const nextColor = this.cycle[0];
+      this.color1[0] = nextColor[0][0];
+      this.color1[1] = nextColor[0][1];
+      this.color1[2] = nextColor[0][2];
+  
+      this.color2[0] = nextColor[1][0];
+      this.color2[1] = nextColor[1][1];
+      this.color2[2] = nextColor[1][2];
       this.cycle.push(head);
     }
   }
